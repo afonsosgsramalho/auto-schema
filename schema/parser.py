@@ -6,3 +6,7 @@ for x, y in combinations(tables, 2):
     #     print(z)
     for xx in x.values():
         print(xx)
+
+
+def output():
+    pass
