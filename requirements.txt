@@ -1,2 +1,4 @@
 python-mermaid==0.1.3
 Js2Py==0.74
+python-dotenv==1.0.1
+mistralai==1.5.0
