@@ -1,4 +1,6 @@
 from diagram import Diagram, Class, Relationship
+from parser import read_json, read_output
+from model import call_api
 
 
 def force_diagram():
@@ -7,30 +9,26 @@ def force_diagram():
 def update_diagram():
     pass
 
+
 def main():
-    title = 'teste'
-    # Create some classes
-    class_customer = Class("Customer", [["id", "int"], ["name", "str"]])
-    class_product = Class("Product", [["id", "int"], ["name", "str"], ["price", "float"]])
-    class_order = Class("Order", [["id", "int"], ["order_date", "date"]])
+    content = read_json('schema/example.json')
+    response = call_api(content)
+    response_parsed = read_output(response)
 
-    # Create some relationships
-    relationship1 = Relationship("Customer", "Order", "||--o{", "customer_id")
-    relationship2 = Relationship("Product", "Order", "||--o{", "product_id")
-
-    # Create a diagram
     diagram = Diagram()
 
-    # Add classes and relationships to the diagram
-    diagram.add_class(class_customer)
-    diagram.add_class(class_product)
-    diagram.add_class(class_order)
+    # Create classes
+    for table in content:
+        diagram.add_class(Class(table, content[table]))
+    
+    # Create relationships
+    for table in response_parsed:
+        table1, table2 = table.split('-')
+        diagram.add_relationship(Relationship(table1, table2, '||--o{', response_parsed[table][0][0]))
+        
 
-    diagram.add_relationship(relationship1)
-    diagram.add_relationship(relationship2)
-
-    # Print the diagram
     return diagram
+
 
 if __name__ == '__main__':
     print(main())
