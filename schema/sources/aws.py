@@ -1,8 +1,9 @@
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 import os
+import time
+import polars as pl
 from dotenv import load_dotenv
-
 load_dotenv()
 
 
@@ -21,31 +22,7 @@ class AWSClientManager:
         )
         return client
 
-    # S3 functions
-    def s3_object_exists(self, bucket_name: str, object_key: str):
-        s3_client = self.create_client('s3')
-        try:
-            s3_client.head_object(Bucket=bucket_name, Key=object_key)
-            return True
-        except ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code == '404':
-                print(f"Object {object_key} does not exist.")
-                return False
-            else:
-                print(f"An error occurred: {e}")
-
-
     # Glue functions
-    def check_table_exists(self, database_name: str, table_name: str):
-        glue_client = self.create_client('glue')
-        try:
-            response = glue_client.get_table(DatabaseName=database_name, Name=table_name)
-            return True
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "EntityNotFoundException":
-                return False
-
     def get_table(self, database_name: str, table_name: str):
         glue_client = self.create_client('glue')
         try:
@@ -80,7 +57,6 @@ class AWSClientManager:
             print(f"Database '{database_name}' not found.")
         return tables
 
-
     # Athena functions
     def get_all_query_strings(self):
         athena_client = self.create_client('athena')
@@ -106,3 +82,45 @@ class AWSClientManager:
         except athena_client.exceptions.InvalidRequestException:
             print(f'Athena queries are not available at this moment')
         return query_strings
+
+    def _get_query_execution(self, database_name: str, table_name: str, output_location: str, limit=None):
+        athena_client = self.create_client('athena')
+        query = f'SELECT * FROM {database_name}.{table_name}'
+
+        if limit is not None:
+            query += f' LIMIT {limit}'
+
+        # Start query execution
+        response = athena_client.start_query_execution(
+            QueryString=query,
+            QueryExecutionContext={'Database': database_name},
+            ResultConfiguration={'OutputLocation': output_location}
+        )
+
+        query_execution_id = response['QueryExecutionId']
+
+        return query_execution_id
+                
+    def _wait_execution(self, query_execution_id: int):
+        athena_client = self.create_client('athena')
+        state = 'RUNNING'
+        while state in ['RUNNING', 'QUEUED']:
+            response = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
+            state = response['QueryExecution']['Status']['State']
+            if state in ['FAILED', 'CANCELLED']:
+                raise Exception(f"Query failed or was cancelled: {response['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')}")
+            time.sleep(1)
+        results_response = athena_client.get_query_results(QueryExecutionId=query_execution_id)
+
+        return results_response
+    
+    def get_query_data(self, database_name:str, table_name:str, output_location:str, limit=None):
+        query_execution_id = self._get_query_execution(database_name, table_name, output_location, limit)
+        response = self._wait_execution(query_execution_id)
+        result_data = response['ResultSet']['Rows']
+        columns = [col['VarCharValue'] for col in result_data[0]['Data']]
+        rows = [[col.get('VarCharValue', '') for col in row['Data']] for row in result_data[1:]]
+        # Create a Polars DataFrame
+        df = pl.DataFrame(rows, schema=columns, orient='row')
+
+        return df
