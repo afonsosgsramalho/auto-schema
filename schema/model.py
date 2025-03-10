@@ -1,8 +1,6 @@
 from mistralai import Mistral
-
 import os
 from dotenv import load_dotenv
-
 load_dotenv()
 
 MODEL = os.getenv('MISTRAL_MODEL')
@@ -32,7 +30,7 @@ PROMPTS = {
 }
 
 
-def call_api(content: str):
+def chat_completion(content: str):
     with Mistral(
         api_key=API_KEY,
     ) as mistral:
@@ -44,9 +42,20 @@ def call_api(content: str):
             },
         ], stream=False)
 
-        #  Handle response
     return chat_response.choices[0].message.content
 
 
+def upload_file(file):
+    file_name = os.path.basename(file)
+    with Mistral(
+        api_key=API_KEY,
+    ) as mistral:
 
+        response = mistral.files.upload(file={
+            "file_name": file,
+            "content": open(file, "rb"),
+        })
 
+        print(response)
+    
+    return response

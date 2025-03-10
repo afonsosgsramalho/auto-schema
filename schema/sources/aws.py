@@ -104,12 +104,15 @@ class AWSClientManager:
     def _wait_execution(self, query_execution_id: int):
         athena_client = self.create_client('athena')
         state = 'RUNNING'
+        
         while state in ['RUNNING', 'QUEUED']:
             response = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
             state = response['QueryExecution']['Status']['State']
+            
             if state in ['FAILED', 'CANCELLED']:
                 raise Exception(f"Query failed or was cancelled: {response['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')}")
             time.sleep(1)
+
         results_response = athena_client.get_query_results(QueryExecutionId=query_execution_id)
 
         return results_response
@@ -117,9 +120,11 @@ class AWSClientManager:
     def get_query_data(self, database_name:str, table_name:str, output_location:str, limit=None):
         query_execution_id = self._get_query_execution(database_name, table_name, output_location, limit)
         response = self._wait_execution(query_execution_id)
+
         result_data = response['ResultSet']['Rows']
         columns = [col['VarCharValue'] for col in result_data[0]['Data']]
         rows = [[col.get('VarCharValue', '') for col in row['Data']] for row in result_data[1:]]
+        
         # Create a Polars DataFrame
         df = pl.DataFrame(rows, schema=columns, orient='row')
 

@@ -39,6 +39,14 @@ class Diagram:
     def add_relationship(self, relationship_obj: Relationship):
         self.relationships.append(relationship_obj)
 
+    def force_diagram(self):
+        #TODO
+        return
+    
+    def update_diagram(self):
+        #TODO
+        return
+
     def __str__(self):
         self.string = f'erDiagram \n\n'
 
