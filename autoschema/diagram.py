@@ -30,14 +30,20 @@ class Relationship:
 
 class Diagram:
     def __init__(self):
-        self.classes = []
+        self.classes = {}
         self.relationships = []
 
     def add_class(self, class_obj: Class):
-        self.classes.append(class_obj)
+        self.classes[class_obj.name] = class_obj
+
+    def get_class(self, name):
+        return self.classes.get(name, [])
 
     def add_relationship(self, relationship_obj: Relationship):
         self.relationships.append(relationship_obj)
+
+    def get_relationships(self):
+        return self.relationships
 
     def force_diagram(self):
         #TODO
@@ -51,10 +57,9 @@ class Diagram:
         self.string = f'erDiagram \n\n'
 
         for class_obj in self.classes:
-            self.string += f'{class_obj} \n\n'
+            self.string += f'{self.classes[class_obj]} \n\n'
 
         for rel_obj in self.relationships:
             self.string += f'{rel_obj} \n'
 
         return self.string
-

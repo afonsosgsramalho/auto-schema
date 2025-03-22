@@ -10,12 +10,14 @@ from prompt import create_prompt
 MAX_TOKEN = 128000
 
 class LLM(Config):
-
     def __init__(self):
         super().__init__()
 
         if not hasattr(self, 'client'):
             self.client = Mistral(api_key=self.api_key)
+
+    def check_size(self, files: dict):
+        pass
 
     def chat_completion(self, files:dict):
         chat_response = self.client.chat.complete(
@@ -34,12 +36,4 @@ class LLM(Config):
 
         return chat_response.choices[0].message.content
 
-    def list_files(self):
-        return self.client.files.list()
 
-
-
-# llm = LLM()
-# print(llm.upload_file('data/validation_file2.jsonl'))
-# print(llm.list_files())
-# print(llm.chat_completion('ola'))

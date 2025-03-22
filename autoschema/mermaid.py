@@ -39,29 +39,39 @@ def store_files(file:FileManager, database:str, bucket_output:str, path=None):
 
 
 def call_llm(llm:LLM, files:dict):
-    if len(files) < 3:
+    if len(files) < 3: 
         raise ValueError('Not enough type of files')
     
     response = llm.chat_completion(files)
-    print(response)
 
     return response
 
 
-def generate_diagram(file_reader:FileReader, chat_response:json):
+def generate_diagram(file_reader: FileReader, chat_response: dict[str, list[list[str]]]) -> Diagram:
     content = file_reader.read_output(chat_response)
-
     diagram = Diagram()
 
-    # Create classes
-    for table in content:
-        diagram.add_class(Class(table, content[table]))
-    
-    # Create relationships
-    for table in content:
-        table1, table2 = table.split('-')
-        diagram.add_relationship(Relationship(table1, table2, '||--o{', content[table][0][0]))
+    for connection in content:
+        col_connections = content[connection]
+        table_src, table_dst = connection.split('-')
+
+        class_src_att = [[col_connection['column_src'], 
+                          col_connection['type_src']] 
+                          for col_connection in col_connections]
         
+        class_dst_att = [[col_connection['column_dst'], 
+                          col_connection['type_dst']] 
+                          for col_connection in col_connections]
+        
+        for col_connection in col_connections:
+            diagram.add_relationship(Relationship(table_src, table_dst, '||--o{', col_connection['column_src']))
+        
+        if not diagram.get_class(table_src):
+            diagram.add_class(Class(table_src, class_src_att))
+
+        if not diagram.get_class(table_dst):
+            diagram.add_class(Class(table_dst, class_dst_att))
+
     return diagram
 
 
@@ -73,5 +83,7 @@ def mermaid():
 
     files = store_files(file, 'silver', 's3://evs-query-output/Unsaved/', 'teste')
     response = call_llm(llm, files)
-    # print(generate_diagram(file_reader, response))
+    # print(response)
+    print()
+    print(generate_diagram(file_reader, response))
 

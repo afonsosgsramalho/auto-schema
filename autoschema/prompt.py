@@ -33,13 +33,60 @@ def create_prompt(files: dict):
     4. Use lowercase for all table and column names in the output.
 
     OUTPUT FORMAT:
-    {"table1-table2": [["column_table1", "column_table2"], ...], ...}
+    {
+        "customer-orders": [
+            {
+                "column_src": "column",
+                "type_src": "INTEGER",
+                "column_dst": "column",
+                "type_dst": "INTEGER"
+            },
+            {
+                "column_src": "other_column",
+                "type_src": "STRING",
+                "column_dst": "other_column",
+                "type_dst": "STRING"
+            },
+            {
+                "column_src": "other_other_column",
+                "type_src": "DATE",
+                "column_dst": "other_other_column",
+                "type_dst": "DATE"
+            }
+        ]
+    }
 
     EXAMPLE:
     INPUT TABLES: {"Customer": [["id", "int"], ["name", "str"], ["product_id", "int"]], "Product": [["id", "int"], ["name", "str"], ["price", "float"]]}
-    EXPECTED OUTPUT: 
-    1 column          -> {"customer-product": [["product_id", "id"]]}
-    2 or more columns -> {"customer-product": [["product_id", "id"], ["name", "name"]]}
+    EXPECTED OUTPUT:
+    1 column:
+    {
+        "customer-product": [
+            {
+                "column_src": "product_id",
+                "type_src": "int",
+                "column_dst": "id",
+                "type_dst": "int"
+            }
+        ]
+    }
+    2 or more columns:
+    {
+        "customer-product": [
+            {
+                "column_src": "product_id",
+                "type_src": "int",
+                "column_dst": "id",
+                "type_dst": "int"
+            },
+            {
+                "column_src": "name",
+                "type_src": "str",
+                "column_dst": "name",
+                "type_dst": "str"
+            }
+        ]
+    }
     '''
 
     prompt = f'''
@@ -55,5 +102,4 @@ def create_prompt(files: dict):
     {csv_string}
     '''
 
-    print(prompt)
     return prompt
