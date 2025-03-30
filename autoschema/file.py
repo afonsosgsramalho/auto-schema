@@ -5,6 +5,7 @@ import json
 import io
 import ast
 import logging
+import pendulum
 
 
 class FileManager:
@@ -59,7 +60,7 @@ class FileManager:
             raise
 
 
-    def create_csv_file(self, path:str, target_file:str, df):
+    def create_csv_file(self, path:str, target_file:str, df:pl.DataFrame):
         self._create_files_folder(path)
 
         try:
@@ -68,6 +69,9 @@ class FileManager:
         except Exception as e:
             print(f'Error writing Csv file: {e}')
             raise
+
+    
+    def create_javascript_file(self, path:str, target_file:str)
 
 
 class FileReader:

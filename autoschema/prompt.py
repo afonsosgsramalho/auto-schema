@@ -31,6 +31,13 @@ def create_prompt(files: dict):
     2. Identify relationships between tables based on foreign keys, JOIN clauses, and data patterns.
     3. Output ONLY a JSON dictionary representing the relationships.  No explanations are needed.
     4. Use lowercase for all table and column names in the output.
+    Notes:
+    Emphasis on Explicit Foreign Keys: The core change is prioritizing explicitly defined foreign key constraints. 
+    This is the most reliable indicator of a relationship in a well-designed database. 
+    If a table schema defines a foreign key, that's the relationship you should use.
+    Prioritizing 'id'-like Column Names in JOINs: If explicit foreign keys are absent, the prompt now specifically looks for JOIN clauses that involve columns named id, table1_id, table2_id, etc. 
+    This is a strong heuristic because these naming conventions are very common for foreign key relationships. 
+    The prompt should be able to recognize author_id linking an articles and authors table.
 
     OUTPUT FORMAT:
     {

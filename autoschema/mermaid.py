@@ -1,7 +1,7 @@
 import json
 
 from diagram import Diagram, Class, Relationship
-from creator import FileManager, FileReader
+from file import FileManager, FileReader
 from llm import LLM
 from sources.aws import AWSClientManager
 
@@ -81,9 +81,9 @@ def mermaid():
     file_reader = FileReader()
     llm = LLM()
 
-    files = store_files(file, 'silver', 's3://evs-query-output/Unsaved/', 'teste')
+    files = store_files(file, 'silver', 's3://evs-query-output/Unsaved/', 'autoSchema')
     response = call_llm(llm, files)
-    # print(response)
+
     print()
     print(generate_diagram(file_reader, response))
 
