@@ -6,4 +6,3 @@ boto3==1.37.6
 polars==1.24.0
 numpy==2.2.3
 requests==2.32.3
-pinecone-client=6.0.0

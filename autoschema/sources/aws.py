@@ -13,6 +13,7 @@ class AWSClientManager:
         self.ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
         self.SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
+
     def create_client(self, service: str):
         client = boto3.client(
             service_name=service,
@@ -21,6 +22,7 @@ class AWSClientManager:
             aws_secret_access_key=self.SECRET_ACCESS_KEY
         )
         return client
+
 
     # Glue functions
     def get_table(self, database_name: str, table_name: str):
@@ -37,6 +39,7 @@ class AWSClientManager:
             if e.response["Error"]["Code"] == "EntityNotFoundException":
                 return False
 
+
     def get_databases(self):
         glue_client = self.create_client('glue')
         try:
@@ -45,6 +48,7 @@ class AWSClientManager:
         except glue_client.exceptions.EntityNotFoundException:
             print('We cannot query databases right now')
         return databases
+
 
     def get_glue_tables(self, database_name: str):
         glue_client = self.create_client('glue')
@@ -57,6 +61,7 @@ class AWSClientManager:
             print(f"Database '{database_name}' not found.")
         return tables
 
+
     # Athena functions
     def get_all_query_strings(self):
         athena_client = self.create_client('athena')
@@ -65,23 +70,27 @@ class AWSClientManager:
         try:
             while True:
                 if next_token:
-                    response = athena_client.list_query_executions(NextToken=next_token)
+                    response = athena_client.list_query_executions(MaxResults=50, NextToken=next_token)
                 else:
                     response = athena_client.list_query_executions()
+                
                 query_execution_ids = response.get('QueryExecutionIds')
                 for query_execution_id in query_execution_ids:
                     query_details = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
                     query_string = query_details['QueryExecution']['Query'].strip('\n').strip()
                     query_result = query_details['QueryExecution']['Status']['State']
+                    
                     if query_result == 'SUCCEEDED' and ('join' in query_string or 'JOIN' in query_string):
                         query_strings.append(query_string)
                         break
+
                 next_token = response.get('NextToken', None)
                 if not next_token:
                     break
         except athena_client.exceptions.InvalidRequestException:
             print(f'Athena queries are not available at this moment')
         return query_strings
+
 
     def _get_query_execution(self, database_name: str, table_name: str, output_location: str, limit=None):
         athena_client = self.create_client('athena')
@@ -100,7 +109,8 @@ class AWSClientManager:
         query_execution_id = response['QueryExecutionId']
 
         return query_execution_id
-                
+
+
     def _wait_execution(self, query_execution_id: int):
         athena_client = self.create_client('athena')
         state = 'RUNNING'
@@ -117,6 +127,7 @@ class AWSClientManager:
 
         return results_response
     
+
     def get_query_data(self, database_name:str, table_name:str, output_location:str, limit=None):
         query_execution_id = self._get_query_execution(database_name, table_name, output_location, limit)
         response = self._wait_execution(query_execution_id)

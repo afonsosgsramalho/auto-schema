@@ -5,8 +5,6 @@ import json
 import io
 import ast
 import logging
-import pendulum
-
 
 class FileManager:
     def __init__(self, file_path: str):
@@ -61,27 +59,18 @@ class FileManager:
 
 
     def create_csv_file(self, path:str, target_file:str, df:pl.DataFrame):
-        self._create_files_folder(path)
+        csv_files_path = f'{path}/csv_files'
+        self._create_files_folder(csv_files_path)
 
         try:
-            df.write_csv(f'{self.file_path}/{path}/{target_file}', separator=',')
+            df.write_csv(f'{self.file_path}/{csv_files_path}/{target_file}', separator=',')
             print(f'CSV file has been written to {self.file_path}/{path}/{target_file}')
         except Exception as e:
             print(f'Error writing Csv file: {e}')
             raise
 
-    
-    def create_javascript_file(self, path:str, target_file:str)
-
 
 class FileReader:
-    def __init__(self):
-        pass
-
-    def validate(self):
-        pass
-
-
     def read_json(self, json_input:json) -> dict:
         with open(json_input) as f:
             dic = json.load(f)
