@@ -23,9 +23,7 @@ def create_prompt(files: dict):
 
     initial_prompt = '''
     CONTEXT: You are a database expert.
-
     OBJECTIVE: Given the following information, your objective is to identify the relations between the tables. You **MUST** follow the next steps
-
     INSTRUCTIONS:
     1. Analyze table schemas, SQL queries, and data sample summaries (provided below).
     2. Identify relationships between tables based on foreign keys, JOIN clauses, and data patterns.
@@ -37,7 +35,6 @@ def create_prompt(files: dict):
     If a table schema defines a foreign key, that's the relationship you should use.
     Prioritizing 'id'-like Column Names in JOINs: If explicit foreign keys are absent, the prompt now specifically looks for JOIN clauses that involve columns named id, table1_id, table2_id, etc. 
     This is a strong heuristic because these naming conventions are very common for foreign key relationships. 
-    The prompt should be able to recognize author_id linking an articles and authors table.
 
     OUTPUT FORMAT:
     {
