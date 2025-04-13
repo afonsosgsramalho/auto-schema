@@ -1,3 +1,4 @@
+from typing import Dict
 from mistralai import Mistral
 import os
 
@@ -16,14 +17,14 @@ class LLM(Config):
             self.client = Mistral(api_key=self.api_key)
 
 
-    def check_size(self, files: dict):
+    def check_size(self, files:Dict[str, str]):
         if not self.is_locally:
             pass
         else:
             raise ModelTypeError('This model only runs thorugh API Service')
         
 
-    def chat_completion(self, files:dict):
+    def chat_completion(self, files:Dict[str, str]):
         if not self.is_locally:
             chat_response = self.client.chat.complete(
                 model = self.model,

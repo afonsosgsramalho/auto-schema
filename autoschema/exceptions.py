@@ -1,7 +1,7 @@
-class DataExtractionError(Exception):
+class ModelTypeError(Exception):
     """Custom exception for data extraction failures."""
     pass
 
-class ModelTypeError(Exception):
-    """Custom exception for data extraction failures."""
+class FileExtractionError(Exception):
+    """Custom exception for file extraction failures."""
     pass

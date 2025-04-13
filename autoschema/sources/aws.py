@@ -1,3 +1,4 @@
+from typing import Optional
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 import os
@@ -14,18 +15,21 @@ class AWSClientManager:
         self.SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
 
-    def create_client(self, service: str):
-        client = boto3.client(
-            service_name=service,
-            region_name=self.REGION_NAME,
-            aws_access_key_id=self.ACCESS_KEY_ID,
-            aws_secret_access_key=self.SECRET_ACCESS_KEY
-        )
-        return client
+    def create_client(self, service:str):
+        try:
+            client = boto3.client(
+                service_name=service,
+                region_name=self.REGION_NAME,
+                aws_access_key_id=self.ACCESS_KEY_ID,
+                aws_secret_access_key=self.SECRET_ACCESS_KEY
+            )
+            return client
+        except NoCredentialsError:
+            print('AWS Credentials are incorrect')
 
 
     # Glue functions
-    def get_table(self, database_name: str, table_name: str):
+    def get_table(self, database_name:str, table_name:str):
         glue_client = self.create_client('glue')
         try:
             response = glue_client.get_table(DatabaseName=database_name, Name=table_name)
@@ -45,21 +49,21 @@ class AWSClientManager:
         try:
             response = glue_client.get_databases()
             databases = [database.get('Name') for database in response.get('DatabaseList')]
+            return databases
         except glue_client.exceptions.EntityNotFoundException:
             print('We cannot query databases right now')
-        return databases
 
 
-    def get_glue_tables(self, database_name: str):
+    def get_glue_tables(self, database_name:str):
         glue_client = self.create_client('glue')
         try:
             tables = []
             response = glue_client.get_tables(DatabaseName=database_name)
             for table in response.get('TableList', []):
                 tables.append(table['Name'])
+            return tables
         except glue_client.exceptions.EntityNotFoundException:
             print(f"Database '{database_name}' not found.")
-        return tables
 
 
     # Athena functions
@@ -87,48 +91,57 @@ class AWSClientManager:
                 next_token = response.get('NextToken', None)
                 if not next_token:
                     break
+            return query_strings
         except athena_client.exceptions.InvalidRequestException:
             print(f'Athena queries are not available at this moment')
-        return query_strings
+        
 
-
-    def _get_query_execution(self, database_name: str, table_name: str, output_location: str, limit=None):
+    def _get_query_execution(self, database_name:str, table_name:str, output_location:str, limit:Optional[int]=None):
         athena_client = self.create_client('athena')
         query = f'SELECT * FROM {database_name}.{table_name}'
 
         if limit is not None:
-            query += f' LIMIT {limit}'
-
-        # Start query execution
-        response = athena_client.start_query_execution(
-            QueryString=query,
-            QueryExecutionContext={'Database': database_name},
-            ResultConfiguration={'OutputLocation': output_location}
-        )
-
-        query_execution_id = response['QueryExecutionId']
-
-        return query_execution_id
+            if isinstance(limit, int):
+                query += f" LIMIT {limit}"
+            else:
+                raise TypeError("Limit must be an integer")
 
 
-    def _wait_execution(self, query_execution_id: int):
+        try:
+            # Start query execution
+            response = athena_client.start_query_execution(
+                QueryString=query,
+                QueryExecutionContext={'Database': database_name},
+                ResultConfiguration={'OutputLocation': output_location}
+            )
+
+            print(response, 'ENTROU CARALHO!!!')
+            query_execution_id = response['QueryExecutionId']
+            return query_execution_id
+        except athena_client.exceptions.InvalidRequestException:
+            print(f'Athena queries are not available at this moment')
+
+
+    def _wait_execution(self, query_execution_id:str):
         athena_client = self.create_client('athena')
         state = 'RUNNING'
         
-        while state in ['RUNNING', 'QUEUED']:
-            response = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
-            state = response['QueryExecution']['Status']['State']
-            
-            if state in ['FAILED', 'CANCELLED']:
-                raise Exception(f"Query failed or was cancelled: {response['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')}")
-            time.sleep(1)
+        try:
+            while state in ['RUNNING', 'QUEUED']:
+                response = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
+                state = response['QueryExecution']['Status']['State']
+                
+                if state in ['FAILED', 'CANCELLED']:
+                    raise Exception(f"Query failed or was cancelled: {response['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')}")
+                time.sleep(1)
 
-        results_response = athena_client.get_query_results(QueryExecutionId=query_execution_id)
+            results_response = athena_client.get_query_results(QueryExecutionId=query_execution_id)
+            return results_response
+        except athena_client.exceptions.InvalidRequestException:
+            print(f'Athena queries are not available at this moment')
+        
 
-        return results_response
-    
-
-    def get_query_data(self, database_name:str, table_name:str, output_location:str, limit=None):
+    def get_query_data(self, database_name:str, table_name:str, output_location:str, limit:Optional[int]=None):
         query_execution_id = self._get_query_execution(database_name, table_name, output_location, limit)
         response = self._wait_execution(query_execution_id)
 

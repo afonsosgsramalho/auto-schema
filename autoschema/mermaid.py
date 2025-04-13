@@ -1,88 +1,42 @@
+from typing import Optional, List, Dict
+
 from diagram import Diagram, Class, Relationship
-from file import FileManager, FileReader
+from file import FileManager, FileReader, FileExtractor
 from llm import LLM
 from sources.aws import AWSClientManager
-from exceptions import DataExtractionError
 
-
-def _extract_table_schemas(
-        aws_client: AWSClientManager,
-        database: str
-) -> dict[str, str]:
-    try:
-        tables = aws_client.get_glue_tables(database)
-        tables_fields = {}
-        
-        for table in tables:
-            tables_fields[table] = aws_client.get_table('silver', table)
-        
-        return tables_fields
-    except Exception as e:
-        raise DataExtractionError(f"Failed to extract SQL queries: {e}") from e
-
-
-def _extract_sql_queries(aws_client: AWSClientManager) -> list[str]:
-    try:
-        return aws_client.get_all_query_strings()
-    except Exception as e:
-        raise DataExtractionError(f"Failed to extract SQL queries: {e}") from e
-    
-
-def _extract_data_samples(
-    file_manager: FileManager,
-    aws_client: AWSClientManager,
-    database: str,
-    bucket_output: str,
-    path: str,
-) -> list[str]:
-    tables_data = []
-    file_reader = FileReader()
-
-    try:
-        tables = aws_client.get_glue_tables(database)
-
-        for table in tables:
-            query_data = aws_client.get_query_data(database, table, bucket_output)
-            table_data = file_reader.dataframe_to_prompt(query_data)
-            tables_data.append(table_data)
-            file_manager.create_csv_file(path, f"{table}.csv", query_data)
-        return tables_data
-
-    except Exception as e:
-        raise DataExtractionError(f"Failed to extract data samples: {e}") from e
-    
 
 def store_files(
-    file_manager: FileManager,
-    database: str,
-    bucket_output: str,
-    path: str = None,
-) -> dict[str, str]:
-    aws_client = AWSClientManager()
-
+    file_extractor:FileExtractor,
+    file_manager:FileManager,
+    database:str,
+    path:Optional[str]
+):
     # 1. Extract Table Schemas (JSON)
-    tables_fields = _extract_table_schemas(aws_client, database)
+    tables_fields = file_extractor.extract_table_schemas(database)
     file_manager.create_json_file(path, "tables.json", tables_fields)
 
     # 2. Extract SQL Queries (Text)
-    query_strings = _extract_sql_queries(aws_client)
-    file_manager.create_text_file(path, "queries_sql.txt", query_strings)
+    # query_strings = file_extractor.extract_sql_queries()
+    # file_manager.create_text_file(path, "queries_sql.txt", query_strings)
 
     # 3. Extract Data Samples (CSV)
-    tables_data = _extract_data_samples(
-        file_manager, aws_client, database, bucket_output, path
-    )
+    tables_data = file_extractor.extract_data_samples(database, path)
+    tables_data = []
 
     output = {
         "json": tables_fields,
-        "sql": query_strings,
+        "sql": [],#query_strings,
         "csv": tables_data,
     }
 
     return output
 
 
-def call_llm(llm:LLM, files:dict):
+def call_llm(
+    llm:LLM, 
+    files:Dict[str, str]
+):
     if len(files) < 3: 
         raise ValueError('Not enough type of files')
     
@@ -92,9 +46,10 @@ def call_llm(llm:LLM, files:dict):
 
 
 def generate_diagram(
-    file_reader: FileReader, 
-    table_list: dict[str, list[list[str]]],
-    chat_response: dict[str, list[list[str]]]) -> Diagram:
+    file_reader:FileReader, 
+    table_list: Dict[str, List[List[str]]],
+    chat_response: Dict[str, List[List[str]]]
+):
 
     content = file_reader.read_output(chat_response)
     diagram = Diagram()
@@ -116,11 +71,24 @@ def generate_diagram(
 
 def mermaid():
     file_path = 'data'
-    file = FileManager(file_path)
+    aws_client = AWSClientManager()
+    file_manager = FileManager(file_path)
     file_reader = FileReader()
-    llm = LLM()
+    file_extractor = FileExtractor(
+        aws_client=aws_client,
+        file_manager=file_manager,
+        bucket_output='s3://evs-query-output/Unsaved/'
+    )
 
-    files = store_files(file, 'silver', 's3://evs-query-output/Unsaved/', 'autoSchema')
+    llm = LLM(
+        is_locally=False
+    )
+
+    files = store_files(
+        file_extractor=file_extractor, 
+        file_manager=file_manager, 
+        database='silver', 
+        path='autoSchema')
     llm_response = call_llm(llm, files)
 
     print()

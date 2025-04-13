@@ -1,5 +1,6 @@
+from typing import Dict
 
-def create_prompt(files: dict):
+def create_prompt(files:Dict[str, str]):
     if not all(key in files for key in ['csv', 'json', 'sql']):
         print("Error: Missing required keys ('csv', 'json', 'sql') in files dictionary.")
         return None
