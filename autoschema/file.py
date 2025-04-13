@@ -87,7 +87,7 @@ class FileReader:
         return parsed_dict
     
 
-    def dataframe_to_prompt(self, df:pl.DataFrame, format:Optional[str]='csv', limit:Optional[int]=10):
+    def dataframe_to_prompt(self, df:pl.DataFrame, format:Optional[str]='csv', limit:Optional[int]=100):
         if limit is not None:
             df = df.head(limit)
 

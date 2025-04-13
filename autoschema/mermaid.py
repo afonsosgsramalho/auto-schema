@@ -4,6 +4,7 @@ from diagram import Diagram, Class, Relationship
 from file import FileManager, FileReader, FileExtractor
 from llm import LLM
 from sources.aws import AWSClientManager
+from render import mm
 
 
 def store_files(
@@ -17,16 +18,15 @@ def store_files(
     file_manager.create_json_file(path, "tables.json", tables_fields)
 
     # 2. Extract SQL Queries (Text)
-    # query_strings = file_extractor.extract_sql_queries()
-    # file_manager.create_text_file(path, "queries_sql.txt", query_strings)
+    query_strings = file_extractor.extract_sql_queries()
+    file_manager.create_text_file(path, "queries_sql.txt", query_strings)
 
     # 3. Extract Data Samples (CSV)
     tables_data = file_extractor.extract_data_samples(database, path)
-    tables_data = []
 
     output = {
         "json": tables_fields,
-        "sql": [],#query_strings,
+        "sql": query_strings,
         "csv": tables_data,
     }
 
@@ -91,6 +91,9 @@ def mermaid():
         path='autoSchema')
     llm_response = call_llm(llm, files)
 
+    diagram = str(generate_diagram(file_reader, files.get('json'), llm_response))
+
     print()
     print(generate_diagram(file_reader, files.get('json'), llm_response))
+    mm(diagram)
 

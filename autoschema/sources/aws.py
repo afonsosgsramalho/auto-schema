@@ -115,7 +115,6 @@ class AWSClientManager:
                 ResultConfiguration={'OutputLocation': output_location}
             )
 
-            print(response, 'ENTROU CARALHO!!!')
             query_execution_id = response['QueryExecutionId']
             return query_execution_id
         except athena_client.exceptions.InvalidRequestException:
@@ -141,7 +140,7 @@ class AWSClientManager:
             print(f'Athena queries are not available at this moment')
         
 
-    def get_query_data(self, database_name:str, table_name:str, output_location:str, limit:Optional[int]=None):
+    def get_query_data(self, database_name:str, table_name:str, output_location:str, limit:Optional[int]=100):
         query_execution_id = self._get_query_execution(database_name, table_name, output_location, limit)
         response = self._wait_execution(query_execution_id)
 
