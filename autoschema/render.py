@@ -20,6 +20,7 @@ def mm(graph):
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         print("Mermaid diagram saved to mermaid_diagram.png")
+        print(f'You can also see the result in {image_url}')
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching or saving image: {e}")
